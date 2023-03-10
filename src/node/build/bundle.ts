@@ -17,6 +17,10 @@ import { buildMPAClient } from './buildMPAClient'
 export const okMark = '\x1b[32m✓\x1b[0m'
 export const failMark = '\x1b[31m✖\x1b[0m'
 
+// A list of default theme components that should only be loaded on demand.
+const lazyDefaultThemeComponentsRE =
+  /VP(HomeSponsors|DocAsideSponsors|TeamPage|TeamMembers|AlgoliaSearch|CarbonAds|DocAsideCarbonAds)/
+
 // bundles the VitePress app for both client AND server.
 export async function bundle(
   config: SiteConfig,
@@ -100,6 +104,13 @@ export async function bundle(
                     : 'assets/chunks/[name].[hash].js'
                 },
                 manualChunks(id, ctx) {
+                  // optimize default theme chunking
+                  if (
+                    id.includes('vitepress/dist/client/theme-default') &&
+                    !lazyDefaultThemeComponentsRE.test(id)
+                  ) {
+                    return 'theme'
+                  }
                   // move known framework code into a stable chunk so that
                   // custom theme changes do not invalidate hash for all pages
                   if (id.includes('plugin-vue:export-helper')) {
@@ -174,7 +185,7 @@ function isEagerChunk(id: string, getModuleInfo: GetModuleInfo) {
     !/\.css($|\\?)/.test(id) &&
     staticImportedByEntry(id, getModuleInfo, cache)
   ) {
-    return 'vendor'
+    return true
   }
 }
 
